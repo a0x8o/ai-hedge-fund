@@ -8,7 +8,7 @@ from src.graph.state import AgentState
 
 
 def call_llm(
-    prompt: any,
+    prompt,
     pydantic_model: type[BaseModel],
     agent_name: str | None = None,
     state: AgentState | None = None,

@@ -25,11 +25,11 @@ def test_compute_exposures(portfolio, prices):
     assert exp["Long/Short Ratio"] == 1.0
 
 
-def test_compute_exposures_with_no_shorts_ratio_inf(portfolio, prices):
+def test_compute_exposures_with_no_shorts_ratio_none(portfolio, prices):
     portfolio.apply_long_buy("AAPL", 1, 100.0)
     exp = compute_exposures(portfolio, prices)
     assert exp["Short Exposure"] == 0.0
-    assert exp["Long/Short Ratio"] == float("inf")
+    assert exp["Long/Short Ratio"] is None
 
 
 def test_compute_portfolio_summary(portfolio, prices):

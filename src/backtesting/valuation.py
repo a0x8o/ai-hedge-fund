@@ -39,7 +39,7 @@ def compute_exposures(portfolio: Portfolio, current_prices: Mapping[str, float])
     if short_exposure > 1e-9:
         long_short_ratio = long_exposure / short_exposure
     else:
-        long_short_ratio = float("inf")
+        long_short_ratio = None  # No short exposure; avoid float("inf") for JSON safety
 
     return {
         "Long Exposure": long_exposure,

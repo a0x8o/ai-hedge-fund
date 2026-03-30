@@ -104,6 +104,9 @@ class BacktestEngine:
         else:
             self._portfolio_values = []
 
+        # Track last known prices per ticker for forward-fill on missing data
+        last_known_prices: Dict[str, float] = {}
+
         for current_date in dates:
             lookback_start = (current_date - relativedelta(months=1)).strftime("%Y-%m-%d")
             current_date_str = current_date.strftime("%Y-%m-%d")
@@ -113,18 +116,37 @@ class BacktestEngine:
 
             try:
                 current_prices: Dict[str, float] = {}
-                missing_data = False
+                all_missing = True
                 for ticker in self._tickers:
                     try:
                         price_data = get_price_data(ticker, previous_date_str, current_date_str)
                         if price_data.empty:
-                            missing_data = True
-                            break
+                            # Forward-fill: use last known price if available
+                            if ticker in last_known_prices:
+                                current_prices[ticker] = last_known_prices[ticker]
+                                all_missing = False
+                            continue
                         current_prices[ticker] = float(price_data.iloc[-1]["close"])
+                        last_known_prices[ticker] = current_prices[ticker]
+                        all_missing = False
                     except Exception:
-                        missing_data = True
-                        break
-                if missing_data:
+                        # Forward-fill on error too
+                        if ticker in last_known_prices:
+                            current_prices[ticker] = last_known_prices[ticker]
+                            all_missing = False
+                # Skip day only if we have no prices at all
+                if all_missing or not current_prices:
+                    continue
+                # Ensure all tickers have a price (forward-fill any still missing)
+                for ticker in self._tickers:
+                    if ticker not in current_prices:
+                        if ticker in last_known_prices:
+                            current_prices[ticker] = last_known_prices[ticker]
+                        else:
+                            # No price ever seen for this ticker — skip day
+                            all_missing = True
+                            break
+                if all_missing:
                     continue
             except Exception:
                 continue

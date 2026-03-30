@@ -8,6 +8,8 @@ from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 
+from pydantic import ValidationError
+
 from src.data.cache import get_cache
 from src.data.models import (
     CompanyNews,
@@ -87,7 +89,7 @@ def get_prices(ticker: str, start_date: str, end_date: str, api_key: str = None)
     try:
         price_response = PriceResponse(**response.json())
         prices = price_response.prices
-    except (ValueError, KeyError) as e:
+    except (ValueError, KeyError, ValidationError) as e:
         logger.warning("Failed to parse price data for %s: %s", ticker, e)
         return []
 
@@ -131,7 +133,7 @@ def get_financial_metrics(
     try:
         metrics_response = FinancialMetricsResponse(**response.json())
         financial_metrics = metrics_response.financial_metrics
-    except (ValueError, KeyError) as e:
+    except (ValueError, KeyError, ValidationError) as e:
         logger.warning("Failed to parse financial metrics for %s: %s", ticker, e)
         return []
 
@@ -184,7 +186,7 @@ def search_line_items(
         data = response.json()
         response_model = LineItemResponse(**data)
         search_results = response_model.search_results
-    except (ValueError, KeyError) as e:
+    except (ValueError, KeyError, ValidationError) as e:
         logger.warning("Failed to parse line items for %s: %s", ticker, e)
         return []
     if not search_results:
@@ -235,7 +237,7 @@ def get_insider_trades(
             data = response.json()
             response_model = InsiderTradeResponse(**data)
             insider_trades = response_model.insider_trades
-        except (ValueError, KeyError) as e:
+        except (ValueError, KeyError, ValidationError) as e:
             logger.warning("Failed to parse insider trades for %s: %s", ticker, e)
             break
 
@@ -302,7 +304,7 @@ def get_company_news(
             data = response.json()
             response_model = CompanyNewsResponse(**data)
             company_news = response_model.news
-        except (ValueError, KeyError) as e:
+        except (ValueError, KeyError, ValidationError) as e:
             logger.warning("Failed to parse company news for %s: %s", ticker, e)
             break
 

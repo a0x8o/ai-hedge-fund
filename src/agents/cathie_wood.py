@@ -1,3 +1,5 @@
+from typing import Any
+
 from src.graph.state import AgentState, show_agent_reasoning
 from src.tools.api import get_financial_metrics, get_market_cap, search_line_items
 from langchain_core.prompts import ChatPromptTemplate
@@ -174,7 +176,7 @@ def analyze_disruptive_potential(metrics: list, financial_line_items: list) -> d
     revenues = [item.revenue for item in financial_line_items if item.revenue]
     operating_expenses = [item.operating_expense for item in financial_line_items if hasattr(item, "operating_expense") and item.operating_expense]
 
-    if len(revenues) >= 2 and len(operating_expenses) >= 2:
+    if len(revenues) >= 2 and len(operating_expenses) >= 2 and revenues[-1] != 0 and operating_expenses[-1] != 0:
         rev_growth = (revenues[0] - revenues[-1]) / abs(revenues[-1])
         opex_growth = (operating_expenses[0] - operating_expenses[-1]) / abs(operating_expenses[-1])
 
@@ -186,7 +188,7 @@ def analyze_disruptive_potential(metrics: list, financial_line_items: list) -> d
 
     # 4. R&D Investment Analysis
     rd_expenses = [item.research_and_development for item in financial_line_items if hasattr(item, "research_and_development") and item.research_and_development is not None]
-    if rd_expenses and revenues:
+    if rd_expenses and revenues and revenues[0] != 0:
         rd_intensity = rd_expenses[0] / revenues[0]
         if rd_intensity > 0.15:  # High R&D intensity
             score += 3
@@ -237,8 +239,8 @@ def analyze_innovation_growth(metrics: list, financial_line_items: list) -> dict
             details.append(f"Moderate R&D investment growth: +{(rd_growth*100):.1f}%")
 
         # Check R&D intensity trend (corrected for reverse chronological order)
-        rd_intensity_start = rd_expenses[-1] / revenues[-1]
-        rd_intensity_end = rd_expenses[0] / revenues[0]
+        rd_intensity_start = rd_expenses[-1] / revenues[-1] if revenues[-1] != 0 else 0
+        rd_intensity_end = rd_expenses[0] / revenues[0] if revenues[0] != 0 else 0
         if rd_intensity_end > rd_intensity_start:
             score += 2
             details.append(f"Increasing R&D intensity: {(rd_intensity_end*100):.1f}% vs {(rd_intensity_start*100):.1f}%")
@@ -282,7 +284,7 @@ def analyze_innovation_growth(metrics: list, financial_line_items: list) -> dict
 
     # 4. Capital Allocation Analysis
     capex = [item.capital_expenditure for item in financial_line_items if hasattr(item, "capital_expenditure") and item.capital_expenditure]
-    if capex and revenues and len(capex) >= 2:
+    if capex and revenues and len(capex) >= 2 and revenues[0] != 0:
         capex_intensity = abs(capex[0]) / revenues[0]
         capex_growth = (abs(capex[0]) - abs(capex[-1])) / abs(capex[-1]) if capex[-1] != 0 else 0
 
@@ -330,11 +332,14 @@ def analyze_cathie_wood_valuation(financial_line_items: list, market_cap: float)
     if fcf <= 0:
         return {"score": 0, "details": f"No positive FCF for valuation; FCF = {fcf}", "intrinsic_value": None}
 
-    # Instead of a standard DCF, let's assume a higher growth rate for an innovative company.
-    # Example values:
-    growth_rate = 0.20  # 20% annual growth
-    discount_rate = 0.15
-    terminal_multiple = 25
+    # Growth-biased DCF for innovative companies.
+    # Uses elevated but bounded assumptions reflecting Cathie Wood's growth thesis:
+    # - 15% annual growth (aggressive but not perpetual — 5-year horizon only)
+    # - 12% discount rate (reflects growth equity risk premium)
+    # - 20x terminal multiple (premium for innovation but below speculative extremes)
+    growth_rate = 0.15
+    discount_rate = 0.12
+    terminal_multiple = 20
     projection_years = 5
 
     present_value = 0
@@ -362,7 +367,7 @@ def analyze_cathie_wood_valuation(financial_line_items: list, market_cap: float)
 
 def generate_cathie_wood_output(
     ticker: str,
-    analysis_data: dict[str, any],
+    analysis_data: dict[str, Any],
     state: AgentState,
     agent_id: str = "cathie_wood_agent",
 ) -> CathieWoodSignal:

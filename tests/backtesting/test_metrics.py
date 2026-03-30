@@ -16,7 +16,7 @@ def _build_values(values: list[float]):
             "Short Exposure": 0.0,
             "Gross Exposure": 0.0,
             "Net Exposure": 0.0,
-            "Long/Short Ratio": np.inf,
+            "Long/Short Ratio": None,
         })
     return points
 

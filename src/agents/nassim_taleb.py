@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 import json
 import math
 from datetime import datetime, timedelta
+from typing import Any
 from typing_extensions import Literal
 import numpy as np
 import pandas as pd
@@ -188,7 +189,7 @@ def safe_float(value, default=0.0):
 ###############################################################################
 
 
-def analyze_tail_risk(prices_df: pd.DataFrame) -> dict[str, any]:
+def analyze_tail_risk(prices_df: pd.DataFrame) -> dict[str, Any]:
     """Assess fat tails, skewness, tail ratio, and max drawdown."""
     if prices_df.empty or len(prices_df) < 20:
         return {"score": 0, "max_score": 8, "details": "Insufficient price data for tail risk analysis"}
@@ -266,7 +267,7 @@ def analyze_tail_risk(prices_df: pd.DataFrame) -> dict[str, any]:
     return {"score": score, "max_score": 8, "details": "; ".join(reasoning)}
 
 
-def analyze_antifragility(metrics: list, line_items: list, market_cap: float | None) -> dict[str, any]:
+def analyze_antifragility(metrics: list, line_items: list, market_cap: float | None) -> dict[str, Any]:
     """Evaluate whether the company benefits from disorder: low debt, high cash, stable margins."""
     if not metrics and not line_items:
         return {"score": 0, "max_score": 10, "details": "Insufficient data for antifragility analysis"}
@@ -354,7 +355,7 @@ def analyze_antifragility(metrics: list, line_items: list, market_cap: float | N
 
 def analyze_convexity(
     metrics: list, line_items: list, prices_df: pd.DataFrame, market_cap: float | None
-) -> dict[str, any]:
+) -> dict[str, Any]:
     """Measure asymmetric payoff potential: R&D optionality, upside/downside ratio, cash optionality."""
     if not metrics and not line_items and prices_df.empty:
         return {"score": 0, "max_score": 10, "details": "Insufficient data for convexity analysis"}
@@ -450,7 +451,7 @@ def analyze_convexity(
     return {"score": score, "max_score": 10, "details": "; ".join(reasoning)}
 
 
-def analyze_fragility(metrics: list, line_items: list) -> dict[str, any]:
+def analyze_fragility(metrics: list, line_items: list) -> dict[str, Any]:
     """Via Negativa: detect fragile companies. High score = NOT fragile."""
     if not metrics:
         return {"score": 0, "max_score": 8, "details": "Insufficient data for fragility analysis"}
@@ -527,7 +528,7 @@ def analyze_fragility(metrics: list, line_items: list) -> dict[str, any]:
     return {"score": score, "max_score": 8, "details": "; ".join(reasoning)}
 
 
-def analyze_skin_in_game(insider_trades: list) -> dict[str, any]:
+def analyze_skin_in_game(insider_trades: list) -> dict[str, Any]:
     """Assess insider alignment: net insider buying signals trust."""
     if not insider_trades:
         return {"score": 1, "max_score": 4, "details": "No insider trade data — neutral assumption"}
@@ -556,7 +557,7 @@ def analyze_skin_in_game(insider_trades: list) -> dict[str, any]:
     return {"score": score, "max_score": 4, "details": "; ".join(reasoning)}
 
 
-def analyze_volatility_regime(prices_df: pd.DataFrame) -> dict[str, any]:
+def analyze_volatility_regime(prices_df: pd.DataFrame) -> dict[str, Any]:
     """Volatility regime analysis. Key Taleb insight: low vol is dangerous (turkey problem)."""
     if prices_df.empty or len(prices_df) < 30:
         return {"score": 0, "max_score": 6, "details": "Insufficient price data for volatility analysis"}
@@ -625,7 +626,7 @@ def analyze_volatility_regime(prices_df: pd.DataFrame) -> dict[str, any]:
     return {"score": score, "max_score": 6, "details": "; ".join(reasoning)}
 
 
-def analyze_black_swan_sentinel(news: list, prices_df: pd.DataFrame) -> dict[str, any]:
+def analyze_black_swan_sentinel(news: list, prices_df: pd.DataFrame) -> dict[str, Any]:
     """Monitor for crisis signals: abnormal news sentiment, volume spikes, price dislocations."""
     score = 2  # Default: normal conditions
     reasoning = []
@@ -682,7 +683,7 @@ def analyze_black_swan_sentinel(news: list, prices_df: pd.DataFrame) -> dict[str
 
 def generate_taleb_output(
     ticker: str,
-    analysis_data: dict[str, any],
+    analysis_data: dict[str, Any],
     state: AgentState,
     agent_id: str = "nassim_taleb_agent",
 ) -> NassimTalebSignal:
