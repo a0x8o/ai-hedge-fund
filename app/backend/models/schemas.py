@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
@@ -57,6 +58,9 @@ class ErrorResponse(BaseModel):
     error: str | None = None
 
 
+# Regex for valid stock ticker symbols (1-10 uppercase letters, optionally with dots/hyphens)
+_TICKER_PATTERN = re.compile(r"^[A-Z][A-Z0-9.\-]{0,9}$")
+
 # Base class for shared fields between HedgeFundRequest and BacktestRequest
 class BaseHedgeFundRequest(BaseModel):
     tickers: List[str]
@@ -65,9 +69,24 @@ class BaseHedgeFundRequest(BaseModel):
     agent_models: Optional[List[AgentModelConfig]] = None
     model_name: Optional[str] = "gpt-4.1"
     model_provider: Optional[ModelProvider] = ModelProvider.OPENAI
-    margin_requirement: float = 0.0
+    margin_requirement: float = Field(default=0.0, ge=0.0, le=1.0)
     portfolio_positions: Optional[List[PortfolioPosition]] = None
     api_keys: Optional[Dict[str, str]] = None
+
+    @field_validator("tickers")
+    @classmethod
+    def validate_tickers(cls, v: List[str]) -> List[str]:
+        if not v:
+            raise ValueError("At least one ticker is required")
+        seen = set()
+        for ticker in v:
+            upper = ticker.upper()
+            if not _TICKER_PATTERN.match(upper):
+                raise ValueError(f"Invalid ticker format: '{ticker}'. Must be 1-10 uppercase alphanumeric characters.")
+            if upper in seen:
+                raise ValueError(f"Duplicate ticker: '{ticker}'")
+            seen.add(upper)
+        return [t.upper() for t in v]
 
     def get_agent_ids(self) -> List[str]:
         """Extract agent IDs from graph structure"""
@@ -94,7 +113,16 @@ class BaseHedgeFundRequest(BaseModel):
 class BacktestRequest(BaseHedgeFundRequest):
     start_date: str
     end_date: str
-    initial_capital: float = 100000.0
+    initial_capital: float = Field(default=100000.0, gt=0.0)
+
+    @field_validator("start_date", "end_date")
+    @classmethod
+    def validate_date_format(cls, v: str) -> str:
+        try:
+            datetime.strptime(v, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f"Invalid date format: '{v}'. Expected YYYY-MM-DD.")
+        return v
 
 
 class BacktestDayResult(BaseModel):
@@ -131,7 +159,18 @@ class BacktestResponse(BaseModel):
 class HedgeFundRequest(BaseHedgeFundRequest):
     end_date: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
     start_date: Optional[str] = None
-    initial_cash: float = 100000.0
+    initial_cash: float = Field(default=100000.0, gt=0.0)
+
+    @field_validator("start_date", "end_date")
+    @classmethod
+    def validate_date_format(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        try:
+            datetime.strptime(v, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f"Invalid date format: '{v}'. Expected YYYY-MM-DD.")
+        return v
 
     def get_start_date(self) -> str:
         """Calculate start date if not provided"""

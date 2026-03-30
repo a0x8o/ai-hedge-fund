@@ -1,5 +1,9 @@
+import logging
+
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
+
+logger = logging.getLogger(__name__)
 
 from app.backend.models.schemas import ErrorResponse
 from app.backend.services.ollama_service import OllamaService
@@ -29,7 +33,8 @@ async def get_language_models():
         
         return {"models": models}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve models: {str(e)}")
+        logger.exception("Failed to retrieve models")
+        raise HTTPException(status_code=500, detail="Failed to retrieve models.")
 
 @router.get(
     path="/providers",
@@ -59,4 +64,5 @@ async def get_language_model_providers():
         
         return {"providers": list(providers.values())}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve providers: {str(e)}") 
+        logger.exception("Failed to retrieve providers")
+        raise HTTPException(status_code=500, detail="Failed to retrieve providers.") 

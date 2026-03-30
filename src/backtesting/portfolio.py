@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Mapping
 from types import MappingProxyType
 
 from .types import PortfolioSnapshot, PositionState, TickerRealizedGains
+
+
+def _to_dec(value: float) -> Decimal:
+    """Convert float to Decimal with string intermediary to preserve precision."""
+    return Decimal(str(value))
 
 
 class Portfolio:
@@ -84,29 +90,30 @@ class Portfolio:
             return 0
         quantity = int(quantity)
         position = self._portfolio["positions"][ticker]
-        cost = quantity * price
+        d_price = _to_dec(price)
+        cost = float(_to_dec(quantity) * d_price)
         if cost <= self._portfolio["cash"]:
             old_shares = position["long"]
-            old_cost_basis = position["long_cost_basis"]
+            old_cost_basis = _to_dec(position["long_cost_basis"])
             total_shares = old_shares + quantity
             if total_shares > 0:
-                total_old_cost = old_cost_basis * old_shares
-                total_new_cost = cost
-                position["long_cost_basis"] = (total_old_cost + total_new_cost) / total_shares
-            position["long"] = old_shares + quantity
+                total_old_cost = old_cost_basis * _to_dec(old_shares)
+                total_new_cost = _to_dec(quantity) * d_price
+                position["long_cost_basis"] = float((total_old_cost + total_new_cost) / _to_dec(total_shares))
+            position["long"] = total_shares
             self._portfolio["cash"] -= cost
             return quantity
         max_quantity = int(self._portfolio["cash"] / price) if price > 0 else 0
         if max_quantity > 0:
-            cost = max_quantity * price
+            cost = float(_to_dec(max_quantity) * d_price)
             old_shares = position["long"]
-            old_cost_basis = position["long_cost_basis"]
+            old_cost_basis = _to_dec(position["long_cost_basis"])
             total_shares = old_shares + max_quantity
             if total_shares > 0:
-                total_old_cost = old_cost_basis * old_shares
-                total_new_cost = cost
-                position["long_cost_basis"] = (total_old_cost + total_new_cost) / total_shares
-            position["long"] = old_shares + max_quantity
+                total_old_cost = old_cost_basis * _to_dec(old_shares)
+                total_new_cost = _to_dec(max_quantity) * d_price
+                position["long_cost_basis"] = float((total_old_cost + total_new_cost) / _to_dec(total_shares))
+            position["long"] = total_shares
             self._portfolio["cash"] -= cost
             return max_quantity
         return 0
@@ -116,11 +123,12 @@ class Portfolio:
         quantity = min(int(quantity), position["long"]) if quantity > 0 else 0
         if quantity <= 0:
             return 0
-        avg_cost = position["long_cost_basis"] if position["long"] > 0 else 0.0
-        realized_gain = (price - avg_cost) * quantity
+        d_price = _to_dec(price)
+        avg_cost = _to_dec(position["long_cost_basis"]) if position["long"] > 0 else Decimal("0")
+        realized_gain = float((d_price - avg_cost) * _to_dec(quantity))
         self._portfolio["realized_gains"][ticker]["long"] += realized_gain
         position["long"] -= quantity
-        self._portfolio["cash"] += quantity * price
+        self._portfolio["cash"] += float(_to_dec(quantity) * d_price)
         if position["long"] == 0:
             position["long_cost_basis"] = 0.0
         return quantity
@@ -130,21 +138,22 @@ class Portfolio:
             return 0
         quantity = int(quantity)
         position = self._portfolio["positions"][ticker]
-        proceeds = price * quantity
+        d_price = _to_dec(price)
+        proceeds = float(d_price * _to_dec(quantity))
         margin_ratio = self._portfolio["margin_requirement"]
-        margin_required = proceeds * margin_ratio
+        margin_required = float(_to_dec(proceeds) * _to_dec(margin_ratio))
         available_cash = max(
             0.0, self._portfolio["cash"] - self._portfolio["margin_used"]
         )
         if margin_required <= available_cash:
             old_short_shares = position["short"]
-            old_cost_basis = position["short_cost_basis"]
+            old_cost_basis = _to_dec(position["short_cost_basis"])
             total_shares = old_short_shares + quantity
             if total_shares > 0:
-                total_old_cost = old_cost_basis * old_short_shares
-                total_new_cost = price * quantity
-                position["short_cost_basis"] = (total_old_cost + total_new_cost) / total_shares
-            position["short"] = old_short_shares + quantity
+                total_old_cost = old_cost_basis * _to_dec(old_short_shares)
+                total_new_cost = d_price * _to_dec(quantity)
+                position["short_cost_basis"] = float((total_old_cost + total_new_cost) / _to_dec(total_shares))
+            position["short"] = total_shares
             position["short_margin_used"] += margin_required
             self._portfolio["margin_used"] += margin_required
             self._portfolio["cash"] += proceeds
@@ -152,16 +161,16 @@ class Portfolio:
             return quantity
         max_quantity = int(available_cash / (price * margin_ratio)) if margin_ratio > 0 and price > 0 else 0
         if max_quantity > 0:
-            proceeds = price * max_quantity
-            margin_required = proceeds * margin_ratio
+            proceeds = float(d_price * _to_dec(max_quantity))
+            margin_required = float(_to_dec(proceeds) * _to_dec(margin_ratio))
             old_short_shares = position["short"]
-            old_cost_basis = position["short_cost_basis"]
+            old_cost_basis = _to_dec(position["short_cost_basis"])
             total_shares = old_short_shares + max_quantity
             if total_shares > 0:
-                total_old_cost = old_cost_basis * old_short_shares
-                total_new_cost = price * max_quantity
-                position["short_cost_basis"] = (total_old_cost + total_new_cost) / total_shares
-            position["short"] = old_short_shares + max_quantity
+                total_old_cost = old_cost_basis * _to_dec(old_short_shares)
+                total_new_cost = d_price * _to_dec(max_quantity)
+                position["short_cost_basis"] = float((total_old_cost + total_new_cost) / _to_dec(total_shares))
+            position["short"] = total_shares
             position["short_margin_used"] += margin_required
             self._portfolio["margin_used"] += margin_required
             self._portfolio["cash"] += proceeds
@@ -174,11 +183,13 @@ class Portfolio:
         quantity = min(int(quantity), position["short"]) if quantity > 0 else 0
         if quantity <= 0:
             return 0
-        cover_cost = quantity * price
-        avg_short_price = position["short_cost_basis"] if position["short"] > 0 else 0.0
-        realized_gain = (avg_short_price - price) * quantity
+        d_price = _to_dec(price)
+        d_qty = _to_dec(quantity)
+        cover_cost = float(d_qty * d_price)
+        avg_short_price = _to_dec(position["short_cost_basis"]) if position["short"] > 0 else Decimal("0")
+        realized_gain = float((avg_short_price - d_price) * d_qty)
         if position["short"] > 0:
-            portion = quantity / position["short"]
+            portion = float(_to_dec(quantity) / _to_dec(position["short"]))
         else:
             portion = 1.0
         margin_to_release = portion * position["short_margin_used"]

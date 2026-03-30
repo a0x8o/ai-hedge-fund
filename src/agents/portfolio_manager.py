@@ -105,7 +105,13 @@ def compute_allowed_actions(
     positions = portfolio.get("positions", {}) or {}
     margin_requirement = float(portfolio.get("margin_requirement", 0.5))
     margin_used = float(portfolio.get("margin_used", 0.0))
-    equity = float(portfolio.get("equity", cash))
+    # Calculate total portfolio equity: cash + long value - short value
+    total_position_value = 0.0
+    for t, pos in positions.items():
+        price = float(current_prices.get(t, 0.0))
+        total_position_value += int(pos.get("long", 0) or 0) * price
+        total_position_value -= int(pos.get("short", 0) or 0) * price
+    equity = float(portfolio.get("equity", cash + total_position_value))
 
     for ticker in tickers:
         price = float(current_prices.get(ticker, 0.0))
@@ -216,6 +222,10 @@ def generate_trading_decision(
                 "You are a portfolio manager.\n"
                 "Inputs per ticker: analyst signals and allowed actions with max qty (already validated).\n"
                 "Pick one allowed action per ticker and a quantity ≤ the max. "
+                "When signals conflict, weigh higher-confidence signals more heavily. "
+                "If value-oriented agents (buffett, graham, munger) disagree with growth/momentum agents, "
+                "prefer the direction supported by higher aggregate confidence. "
+                "If overall confidence is low or signals are evenly split, prefer hold. "
                 "Keep reasoning very concise (max 100 chars). No cash or margin math. Return JSON only."
             ),
             (

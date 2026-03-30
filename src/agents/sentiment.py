@@ -31,19 +31,25 @@ def sentiment_analyst_agent(state: AgentState, agent_id: str = "sentiment_analys
 
         progress.update_status(agent_id, ticker, "Analyzing trading patterns")
 
-        # Get the signals from the insider trades
-        transaction_shares = pd.Series([t.transaction_shares for t in insider_trades]).dropna()
-        insider_signals = np.where(transaction_shares < 0, "bearish", "bullish").tolist()
+        # Get the signals from the insider trades (handle empty data)
+        if insider_trades:
+            transaction_shares = pd.Series([t.transaction_shares for t in insider_trades]).dropna()
+            insider_signals = np.where(transaction_shares < 0, "bearish", "bullish").tolist() if len(transaction_shares) > 0 else []
+        else:
+            insider_signals = []
 
         progress.update_status(agent_id, ticker, "Fetching company news")
 
         # Get the company news
         company_news = get_company_news(ticker, end_date, limit=100, api_key=api_key)
 
-        # Get the sentiment from the company news
-        sentiment = pd.Series([n.sentiment for n in company_news]).dropna()
-        news_signals = np.where(sentiment == "negative", "bearish", 
-                              np.where(sentiment == "positive", "bullish", "neutral")).tolist()
+        # Get the sentiment from the company news (handle empty data)
+        if company_news:
+            sentiment = pd.Series([n.sentiment for n in company_news]).dropna()
+            news_signals = np.where(sentiment == "negative", "bearish",
+                                  np.where(sentiment == "positive", "bullish", "neutral")).tolist() if len(sentiment) > 0 else []
+        else:
+            news_signals = []
         
         progress.update_status(agent_id, ticker, "Combining signals")
         # Combine signals from both sources with weights

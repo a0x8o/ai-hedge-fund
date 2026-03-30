@@ -52,7 +52,8 @@ class PerformanceMetricsCalculator:
         if downside_dev > 1e-12:
             sortino = float(np.sqrt(self.annual_trading_days) * (mean_excess / downside_dev))
         else:
-            sortino = float("inf") if mean_excess > 0 else 0.0
+            # Cap at 999.99 to avoid JSON serialization issues with float("inf")
+            sortino = 999.99 if mean_excess > 0 else 0.0
 
         rolling_max = df["Portfolio Value"].cummax()
         drawdown = (df["Portfolio Value"] - rolling_max) / rolling_max

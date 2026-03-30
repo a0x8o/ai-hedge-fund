@@ -108,7 +108,7 @@ class BacktestEngine:
             lookback_start = (current_date - relativedelta(months=1)).strftime("%Y-%m-%d")
             current_date_str = current_date.strftime("%Y-%m-%d")
             previous_date_str = (current_date - relativedelta(days=1)).strftime("%Y-%m-%d")
-            if lookback_start == current_date_str:
+            if lookback_start >= current_date_str:
                 continue
 
             try:

@@ -1,6 +1,10 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 from app.backend.database import get_db
 from app.backend.repositories.flow_repository import FlowRepository
@@ -39,7 +43,8 @@ async def create_flow(request: FlowCreateRequest, db: Session = Depends(get_db))
         )
         return FlowResponse.from_orm(flow)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create flow: {str(e)}")
+        logger.exception("Failed to create flow")
+        raise HTTPException(status_code=500, detail="Failed to create flow.")
 
 
 @router.get(
@@ -56,7 +61,8 @@ async def get_flows(include_templates: bool = True, db: Session = Depends(get_db
         flows = repo.get_all_flows(include_templates=include_templates)
         return [FlowSummaryResponse.from_orm(flow) for flow in flows]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve flows: {str(e)}")
+        logger.exception("Failed to retrieve flows")
+        raise HTTPException(status_code=500, detail="Failed to retrieve flows.")
 
 
 @router.get(
@@ -78,7 +84,8 @@ async def get_flow(flow_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve flow: {str(e)}")
+        logger.exception("Failed to retrieve flow")
+        raise HTTPException(status_code=500, detail="Failed to retrieve flow.")
 
 
 @router.put(
@@ -110,7 +117,8 @@ async def update_flow(flow_id: int, request: FlowUpdateRequest, db: Session = De
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update flow: {str(e)}")
+        logger.exception("Failed to update flow")
+        raise HTTPException(status_code=500, detail="Failed to update flow.")
 
 
 @router.delete(
@@ -132,7 +140,8 @@ async def delete_flow(flow_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete flow: {str(e)}")
+        logger.exception("Failed to delete flow")
+        raise HTTPException(status_code=500, detail="Failed to delete flow.")
 
 
 @router.post(
@@ -154,7 +163,8 @@ async def duplicate_flow(flow_id: int, new_name: str = None, db: Session = Depen
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to duplicate flow: {str(e)}")
+        logger.exception("Failed to duplicate flow")
+        raise HTTPException(status_code=500, detail="Failed to duplicate flow.")
 
 
 @router.get(
@@ -171,4 +181,5 @@ async def search_flows(name: str, db: Session = Depends(get_db)):
         flows = repo.get_flows_by_name(name)
         return [FlowSummaryResponse.from_orm(flow) for flow in flows]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to search flows: {str(e)}") 
+        logger.exception("Failed to search flows")
+        raise HTTPException(status_code=500, detail="Failed to search flows.") 

@@ -160,8 +160,8 @@ def risk_management_agent(state: AgentState, agent_id: str = "risk_management_ag
                     ]
                     corr_multiplier = calculate_correlation_multiplier(avg_corr)
         
-        # Combine volatility and correlation adjustments
-        combined_limit_pct = vol_adjusted_limit_pct * corr_multiplier
+        # Combine volatility and correlation adjustments, capped at 30% max
+        combined_limit_pct = min(vol_adjusted_limit_pct * corr_multiplier, 0.30)
         # Convert to dollar position limit
         position_limit = total_portfolio_value * combined_limit_pct
         

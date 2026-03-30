@@ -1,6 +1,10 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 from app.backend.database import get_db
 from app.backend.repositories.api_key_repository import ApiKeyRepository
@@ -36,7 +40,8 @@ async def create_or_update_api_key(request: ApiKeyCreateRequest, db: Session = D
         )
         return ApiKeyResponse.from_orm(api_key)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create/update API key: {str(e)}")
+        logger.exception("Failed to create/update API key")
+        raise HTTPException(status_code=500, detail="Failed to create/update API key.")
 
 
 @router.get(
@@ -53,7 +58,8 @@ async def get_api_keys(include_inactive: bool = False, db: Session = Depends(get
         api_keys = repo.get_all_api_keys(include_inactive=include_inactive)
         return [ApiKeySummaryResponse.from_orm(key) for key in api_keys]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve API keys: {str(e)}")
+        logger.exception("Failed to retrieve API keys")
+        raise HTTPException(status_code=500, detail="Failed to retrieve API keys.")
 
 
 @router.get(
@@ -75,7 +81,8 @@ async def get_api_key(provider: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve API key: {str(e)}")
+        logger.exception("Failed to retrieve API key")
+        raise HTTPException(status_code=500, detail="Failed to retrieve API key.")
 
 
 @router.put(
@@ -102,7 +109,8 @@ async def update_api_key(provider: str, request: ApiKeyUpdateRequest, db: Sessio
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update API key: {str(e)}")
+        logger.exception("Failed to update API key")
+        raise HTTPException(status_code=500, detail="Failed to update API key.")
 
 
 @router.delete(
@@ -124,7 +132,8 @@ async def delete_api_key(provider: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete API key: {str(e)}")
+        logger.exception("Failed to delete API key")
+        raise HTTPException(status_code=500, detail="Failed to delete API key.")
 
 
 @router.patch(
@@ -149,7 +158,8 @@ async def deactivate_api_key(provider: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to deactivate API key: {str(e)}")
+        logger.exception("Failed to deactivate API key")
+        raise HTTPException(status_code=500, detail="Failed to deactivate API key.")
 
 
 @router.post(
@@ -176,7 +186,8 @@ async def bulk_update_api_keys(request: ApiKeyBulkUpdateRequest, db: Session = D
         api_keys = repo.bulk_create_or_update(api_keys_data)
         return [ApiKeyResponse.from_orm(key) for key in api_keys]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to bulk update API keys: {str(e)}")
+        logger.exception("Failed to bulk update API keys")
+        raise HTTPException(status_code=500, detail="Failed to bulk update API keys.")
 
 
 @router.patch(
@@ -198,4 +209,5 @@ async def update_last_used(provider: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update last used timestamp: {str(e)}") 
+        logger.exception("Failed to update last used timestamp")
+        raise HTTPException(status_code=500, detail="Failed to update last used timestamp.") 

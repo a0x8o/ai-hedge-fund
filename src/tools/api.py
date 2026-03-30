@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import requests
 import time
+from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,8 @@ def get_prices(ticker: str, start_date: str, end_date: str, api_key: str = None)
     if financial_api_key:
         headers["X-API-KEY"] = financial_api_key
 
-    url = f"https://api.financialdatasets.ai/prices/?ticker={ticker}&interval=day&interval_multiplier=1&start_date={start_date}&end_date={end_date}"
+    params = urlencode({"ticker": ticker, "interval": "day", "interval_multiplier": 1, "start_date": start_date, "end_date": end_date})
+    url = f"https://api.financialdatasets.ai/prices/?{params}"
     response = _make_api_request(url, headers)
     if response.status_code != 200:
         logger.warning("Could not fetch prices for %s (HTTP %s)", ticker, response.status_code)
@@ -118,7 +120,8 @@ def get_financial_metrics(
     if financial_api_key:
         headers["X-API-KEY"] = financial_api_key
 
-    url = f"https://api.financialdatasets.ai/financial-metrics/?ticker={ticker}&report_period_lte={end_date}&limit={limit}&period={period}"
+    params = urlencode({"ticker": ticker, "report_period_lte": end_date, "limit": limit, "period": period})
+    url = f"https://api.financialdatasets.ai/financial-metrics/?{params}"
     response = _make_api_request(url, headers)
     if response.status_code != 200:
         logger.warning("Could not fetch financial metrics for %s (HTTP %s)", ticker, response.status_code)
@@ -148,8 +151,16 @@ def search_line_items(
     limit: int = 10,
     api_key: str = None,
 ) -> list[LineItem]:
-    """Fetch line items from API."""
-    # If not in cache or insufficient data, fetch from API
+    """Fetch line items from cache or API."""
+    # Create a cache key that includes all parameters to ensure exact matches
+    items_key = "_".join(sorted(line_items))
+    cache_key = f"{ticker}_{items_key}_{period}_{end_date}_{limit}"
+
+    # Check cache first
+    if cached_data := _cache.get_line_items(cache_key):
+        return [LineItem(**item) for item in cached_data]
+
+    # If not in cache, fetch from API
     headers = {}
     financial_api_key = api_key or os.environ.get("FINANCIAL_DATASETS_API_KEY")
     if financial_api_key:
@@ -179,8 +190,10 @@ def search_line_items(
     if not search_results:
         return []
 
+    results = search_results[:limit]
     # Cache the results
-    return search_results[:limit]
+    _cache.set_line_items(cache_key, [item.model_dump() for item in results])
+    return results
 
 
 def get_insider_trades(
@@ -208,10 +221,10 @@ def get_insider_trades(
     current_end_date = end_date
 
     while True:
-        url = f"https://api.financialdatasets.ai/insider-trades/?ticker={ticker}&filing_date_lte={current_end_date}"
+        query_params = {"ticker": ticker, "filing_date_lte": current_end_date, "limit": limit}
         if start_date:
-            url += f"&filing_date_gte={start_date}"
-        url += f"&limit={limit}"
+            query_params["filing_date_gte"] = start_date
+        url = f"https://api.financialdatasets.ai/insider-trades/?{urlencode(query_params)}"
 
         response = _make_api_request(url, headers)
         if response.status_code != 200:
@@ -275,10 +288,10 @@ def get_company_news(
     current_end_date = end_date
 
     while True:
-        url = f"https://api.financialdatasets.ai/news/?ticker={ticker}&end_date={current_end_date}"
+        query_params = {"ticker": ticker, "end_date": current_end_date, "limit": limit}
         if start_date:
-            url += f"&start_date={start_date}"
-        url += f"&limit={limit}"
+            query_params["start_date"] = start_date
+        url = f"https://api.financialdatasets.ai/news/?{urlencode(query_params)}"
 
         response = _make_api_request(url, headers)
         if response.status_code != 200:
@@ -331,7 +344,7 @@ def get_market_cap(
         if financial_api_key:
             headers["X-API-KEY"] = financial_api_key
 
-        url = f"https://api.financialdatasets.ai/company/facts/?ticker={ticker}"
+        url = f"https://api.financialdatasets.ai/company/facts/?{urlencode({'ticker': ticker})}"
         response = _make_api_request(url, headers)
         if response.status_code != 200:
             logger.warning("Could not fetch company facts for %s (HTTP %s)", ticker, response.status_code)

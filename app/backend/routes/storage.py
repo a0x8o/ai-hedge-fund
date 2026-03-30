@@ -1,5 +1,9 @@
+import logging
+
 from fastapi import APIRouter, HTTPException
 import json
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 from pydantic import BaseModel
 
@@ -41,4 +45,5 @@ async def save_json_file(request: SaveJsonRequest):
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}") 
+        logger.exception("Failed to save file")
+        raise HTTPException(status_code=500, detail="Failed to save file.") 
