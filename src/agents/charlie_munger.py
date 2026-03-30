@@ -325,7 +325,7 @@ def analyze_management_quality(financial_line_items: list, insider_trades: list)
     
     if debt_values and equity_values and len(debt_values) == len(equity_values):
         # Calculate D/E ratio for most recent period
-        recent_de_ratio = debt_values[0] / equity_values[0] if equity_values[0] > 0 else float('inf')
+        recent_de_ratio = debt_values[0] / equity_values[0] if equity_values[0] > 0 else 999.0
         
         if recent_de_ratio < 0.3:  # Very low debt
             score += 3
@@ -424,7 +424,7 @@ def analyze_management_quality(financial_line_items: list, insider_trades: list)
 
     # Debt ratio (D/E) -> we compute `recent_de_ratio`
     if debt_values and equity_values and len(debt_values) == len(equity_values):
-        recent_de_ratio = debt_values[0] / equity_values[0] if equity_values[0] > 0 else float("inf")
+        recent_de_ratio = debt_values[0] / equity_values[0] if equity_values[0] > 0 else 999.0
 
     # Cash/Revenue -> we compute `cash_to_revenue`
     if cash_values and revenue_values and revenue_values[0] and revenue_values[0] > 0:

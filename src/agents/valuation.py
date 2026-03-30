@@ -247,6 +247,8 @@ def calculate_owner_earnings_value(
         pv += future / (1 + required_return) ** yr
 
     terminal_growth = min(growth_rate, 0.03)
+    if required_return <= terminal_growth:
+        return 0
     term_val = (owner_earnings * (1 + growth_rate) ** num_years * (1 + terminal_growth)) / (
         required_return - terminal_growth
     )
@@ -272,6 +274,8 @@ def calculate_intrinsic_value(
         fcft = free_cash_flow * (1 + growth_rate) ** yr
         pv += fcft / (1 + discount_rate) ** yr
 
+    if discount_rate <= terminal_growth_rate:
+        return 0
     term_val = (
         free_cash_flow * (1 + growth_rate) ** num_years * (1 + terminal_growth_rate)
     ) / (discount_rate - terminal_growth_rate)
@@ -322,6 +326,8 @@ def calculate_residual_income_value(
         ri_t = ri0 * (1 + book_value_growth) ** yr
         pv_ri += ri_t / (1 + cost_of_equity) ** yr
 
+    if cost_of_equity <= terminal_growth_rate:
+        return 0
     term_ri = ri0 * (1 + book_value_growth) ** (num_years + 1) / (
         cost_of_equity - terminal_growth_rate
     )
@@ -439,6 +445,8 @@ def calculate_enhanced_dcf_value(
     final_fcf = base_fcf * (1 + high_growth) ** 3 * (1 + transition_growth) ** 4
     if wacc <= terminal_growth:
         terminal_growth = wacc * 0.8  # Adjust if invalid
+    if (wacc - terminal_growth) == 0:
+        return 0
     terminal_value = (final_fcf * (1 + terminal_growth)) / (wacc - terminal_growth)
     pv_terminal = terminal_value / (1 + wacc) ** 7
     

@@ -588,6 +588,8 @@ def calculate_intrinsic_value(financial_line_items: list) -> dict[str, any]:
     # Terminal value using Gordon Growth Model
     final_earnings = stage1_final_earnings * (1 + stage2_growth) ** stage2_years
     terminal_earnings = final_earnings * (1 + terminal_growth)
+    if discount_rate <= terminal_growth:
+        return {"intrinsic_value": None, "details": ["Discount rate must exceed terminal growth rate"]}
     terminal_value = terminal_earnings / (discount_rate - terminal_growth)
     terminal_pv = terminal_value / (1 + discount_rate) ** (stage1_years + stage2_years)
 

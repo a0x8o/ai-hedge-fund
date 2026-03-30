@@ -369,19 +369,22 @@ def analyze_risk_reward(financial_line_items: list, prices: list) -> dict:
 
     if debt_values and equity_values and len(debt_values) == len(equity_values) and len(debt_values) > 0:
         recent_debt = debt_values[0]
-        recent_equity = equity_values[0] if equity_values[0] else 1e-9
-        de_ratio = recent_debt / recent_equity
-        if de_ratio < 0.3:
-            raw_score += 3
-            details.append(f"Low debt-to-equity: {de_ratio:.2f}")
-        elif de_ratio < 0.7:
-            raw_score += 2
-            details.append(f"Moderate debt-to-equity: {de_ratio:.2f}")
-        elif de_ratio < 1.5:
-            raw_score += 1
-            details.append(f"Somewhat high debt-to-equity: {de_ratio:.2f}")
+        recent_equity = equity_values[0]
+        if not recent_equity or recent_equity == 0:
+            details.append("Shareholders equity is zero/missing; can't compute D/E ratio.")
         else:
-            details.append(f"High debt-to-equity: {de_ratio:.2f}")
+            de_ratio = recent_debt / recent_equity
+            if de_ratio < 0.3:
+                raw_score += 3
+                details.append(f"Low debt-to-equity: {de_ratio:.2f}")
+            elif de_ratio < 0.7:
+                raw_score += 2
+                details.append(f"Moderate debt-to-equity: {de_ratio:.2f}")
+            elif de_ratio < 1.5:
+                raw_score += 1
+                details.append(f"Somewhat high debt-to-equity: {de_ratio:.2f}")
+            else:
+                details.append(f"High debt-to-equity: {de_ratio:.2f}")
     else:
         details.append("No consistent debt/equity data available.")
 

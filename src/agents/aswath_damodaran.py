@@ -323,12 +323,16 @@ def calculate_intrinsic_value_dcf(metrics: list, line_items: list, risk_analysis
         g += g_step
 
     # Terminal value (perpetuity with terminal growth)
-    tv = (
-        fcff0
-        * (1 + terminal_growth)
-        / (discount - terminal_growth)
-        / (1 + discount) ** years
-    )
+    # Guard against discount_rate ≈ terminal_growth (would cause division by zero)
+    if abs(discount - terminal_growth) < 0.001:
+        tv = fcff0 * years / (1 + discount) ** years  # fallback: simple multiple
+    else:
+        tv = (
+            fcff0
+            * (1 + terminal_growth)
+            / (discount - terminal_growth)
+            / (1 + discount) ** years
+        )
 
     equity_value = pv_sum + tv
     intrinsic_per_share = equity_value / shares

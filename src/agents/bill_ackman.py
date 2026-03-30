@@ -373,7 +373,7 @@ def analyze_valuation(financial_line_items: list, market_cap: float) -> dict:
     ) / ((1 + discount_rate) ** projection_years)
     
     intrinsic_value = present_value + terminal_value
-    margin_of_safety = (intrinsic_value - market_cap) / market_cap
+    margin_of_safety = (intrinsic_value - market_cap) / market_cap if market_cap != 0 else 0
     
     score = 0
     # Simple scoring
